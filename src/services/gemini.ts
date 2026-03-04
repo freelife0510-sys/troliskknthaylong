@@ -12,9 +12,9 @@ export interface ModelOption {
 }
 
 export const AVAILABLE_MODELS: ModelOption[] = [
-  { id: "gemini-3-pro", name: "Gemini 3 Pro", description: "Mạnh nhất, phân tích sâu" },
+  { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", description: "Mạnh nhất, phân tích sâu" },
   { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", description: "Cân bằng tốc độ & chất lượng" },
-  { id: "gemini-3-flash", name: "Gemini 3 Flash", description: "Nhanh nhất, tiết kiệm quota" },
+  { id: "gemini-3-flash-preview", name: "Gemini 3 Flash", description: "Nhanh nhất, tiết kiệm quota" },
 ];
 
 export const DEFAULT_MODEL = "gemini-2.5-flash";
@@ -50,9 +50,11 @@ function createClient(apiKey?: string): GoogleGenAI {
 export async function testApiKey(apiKey: string): Promise<{ valid: boolean; error?: string }> {
   try {
     const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
-    const selectedModel = getSelectedModel();
+
+    // Luôn dùng gemini-2.0-flash hoặc gemini-2.5-flash để test key 
+    // vì các model "thinking" hoặc "pro" có thể không support prompt quá ngắn
     const response = await ai.models.generateContent({
-      model: selectedModel,
+      model: "gemini-2.0-flash",
       contents: "Trả lời đúng 1 từ: Xin chào",
     });
     if (response.text) {
@@ -80,7 +82,7 @@ export async function testApiKey(apiKey: string): Promise<{ valid: boolean; erro
       return { valid: false, error: "API Key không có quyền truy cập. Vui lòng kiểm tra lại key hoặc bật API tại Google Cloud Console." };
     }
     if (statusCode === 404) {
-      return { valid: false, error: "Model AI không tìm thấy. Vui lòng thử lại sau." };
+      return { valid: false, error: "Model AI không tìm thấy. Có thể model này chưa khả dụng tại Việt Nam hoặc với API Key của bạn." };
     }
     if (statusCode === 429) {
       return { valid: false, error: "Đã hết hạn mức (quota). Vui lòng chờ vài phút hoặc dùng key khác." };
