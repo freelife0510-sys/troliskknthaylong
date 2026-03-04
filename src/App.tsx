@@ -19,7 +19,7 @@ export default function App() {
     title: '',
     level: 'Tiểu học',
     subject: '',
-    target: 'Cấp Huyện',
+    target: 'Cấp Tỉnh/Thành phố',
     content: '',
   });
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -60,7 +60,7 @@ export default function App() {
 
   const handleNewAnalysis = () => {
     setResult(null);
-    setFormData({ title: '', level: 'Tiểu học', subject: '', target: 'Cấp Huyện', content: '' });
+    setFormData({ title: '', level: 'Tiểu học', subject: '', target: 'Cấp Tỉnh/Thành phố', content: '' });
     setStep('input');
   };
 

@@ -137,7 +137,6 @@ export default function InputForm({ formData, setFormData, onAnalyze, isAnalyzin
                         onChange={(e) => setFormData(prev => ({ ...prev, target: e.target.value }))}
                     >
                         <option>Cấp Trường</option>
-                        <option>Cấp Huyện</option>
                         <option>Cấp Tỉnh/Thành phố</option>
                         <option>Cấp Quốc gia</option>
                     </select>

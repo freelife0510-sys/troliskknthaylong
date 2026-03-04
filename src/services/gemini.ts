@@ -37,43 +37,40 @@ export async function testApiKey(apiKey: string): Promise<{ valid: boolean; erro
   } catch (error: any) {
     console.error("API Key test error:", error);
 
-    // Try to get the HTTP status code from the error
-    const status = error?.status || error?.statusCode || error?.code;
+    // @google/genai SDK uses 'statusCode' for HTTP status
+    const statusCode = error?.statusCode || error?.status || error?.code;
     const msg = error?.message || "";
-    const errorDetails = error?.errorDetails || error?.details;
 
-    // Log full error for debugging
-    console.error("Error status:", status, "Message:", msg, "Details:", errorDetails);
+    console.error("Error statusCode:", statusCode, "Message:", msg);
 
-    // Check by HTTP status code first (most reliable)
-    if (status === 401 || status === 403) {
-      if (msg.toLowerCase().includes("api_key_invalid") || msg.includes("API key not valid")) {
-        return { valid: false, error: "API Key không hợp lệ. Vui lòng kiểm tra lại." };
-      }
-      if (msg.toLowerCase().includes("permission") || msg.toLowerCase().includes("billing")) {
-        return { valid: false, error: "API Key chưa được kích hoạt hoặc chưa bật billing. Vui lòng kiểm tra tại Google Cloud Console." };
-      }
-      return { valid: false, error: `API Key bị từ chối (${status}). Chi tiết: ${msg}` };
+    // 1. Check by HTTP status code (most reliable)
+    if (statusCode === 400) {
+      // INVALID_ARGUMENT or FAILED_PRECONDITION - free tier unavailable in some regions
+      return { valid: false, error: `Yêu cầu không hợp lệ. API có thể chưa khả dụng tại khu vực của bạn. Chi tiết: ${msg}` };
+    }
+    if (statusCode === 401) {
+      return { valid: false, error: "API Key không hợp lệ hoặc đã hết hạn. Vui lòng lấy key mới tại Google AI Studio." };
+    }
+    if (statusCode === 403) {
+      return { valid: false, error: "API Key không có quyền truy cập. Vui lòng kiểm tra lại key hoặc bật API tại Google Cloud Console." };
+    }
+    if (statusCode === 404) {
+      return { valid: false, error: "Model AI không tìm thấy. Vui lòng thử lại sau." };
+    }
+    if (statusCode === 429) {
+      return { valid: false, error: "Đã hết hạn mức (quota). Vui lòng chờ vài phút hoặc dùng key khác." };
+    }
+    if (statusCode >= 500) {
+      return { valid: false, error: "Lỗi máy chủ Google AI. Vui lòng thử lại sau vài phút." };
     }
 
-    if (status === 429) {
-      return { valid: false, error: "API Key đã hết hạn mức (quota). Vui lòng thử key khác hoặc chờ vài phút." };
+    // 2. Fallback: check by message content
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("ERR_NETWORK") || msg.includes("fetch")) {
+      return { valid: false, error: "Không thể kết nối đến Google AI. Vui lòng kiểm tra kết nối mạng." };
     }
 
-    if (status === 404 || msg.includes("not found") || msg.includes("NOT_FOUND")) {
-      return { valid: false, error: "Model AI không khả dụng. Vui lòng thử lại sau." };
-    }
-
-    // Fallback: check by message content
-    if (msg.includes("API_KEY_INVALID") || msg.includes("API key not valid")) {
-      return { valid: false, error: "API Key không hợp lệ. Vui lòng kiểm tra lại." };
-    }
-    if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("ERR_NETWORK")) {
-      return { valid: false, error: "Không thể kết nối mạng. Vui lòng kiểm tra internet." };
-    }
-
-    // Show the actual error message to help debugging
-    return { valid: false, error: `Lỗi xác thực: ${msg || "Không xác định"}` };
+    // 3. Show actual error for unknown cases
+    return { valid: false, error: `Lỗi: ${msg || "Không xác định. Vui lòng thử lại."}` };
   }
 }
 
@@ -219,14 +216,22 @@ export async function analyzeSKKN(
     return JSON.parse(text) as AnalysisResult;
   } catch (error: any) {
     console.error("Error analyzing SKKN:", error);
+    const statusCode = error?.statusCode || error?.status || error?.code;
     const msg = error?.message || "";
-    if (msg.includes("API_KEY_INVALID") || msg.includes("401")) {
-      throw new Error("API Key không hợp lệ. Vui lòng kiểm tra lại trong phần Cài đặt.");
+
+    if (statusCode === 400) {
+      throw new Error(`Yêu cầu không hợp lệ. Chi tiết: ${msg}`);
     }
-    if (msg.includes("QUOTA") || msg.includes("429")) {
-      throw new Error("Đã hết hạn mức API. Vui lòng thử lại sau hoặc dùng key khác.");
+    if (statusCode === 401 || statusCode === 403) {
+      throw new Error("API Key không hợp lệ hoặc không có quyền. Vui lòng kiểm tra lại trong phần API Key.");
     }
-    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+    if (statusCode === 429) {
+      throw new Error("Đã hết hạn mức API. Vui lòng chờ vài phút hoặc dùng key khác.");
+    }
+    if (statusCode >= 500) {
+      throw new Error("Lỗi máy chủ Google AI. Vui lòng thử lại sau.");
+    }
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("fetch")) {
       throw new Error("Không thể kết nối đến AI. Vui lòng kiểm tra kết nối mạng.");
     }
     throw new Error(`Lỗi phân tích: ${msg || "Không xác định. Vui lòng thử lại."}`);
