@@ -104,6 +104,27 @@ export async function testApiKey(apiKey: string, modelId: string): Promise<{ val
   }
 }
 
+// ── Helpers ───────────────────────────────────────────────────────
+function cleanJsonResponse(text: string): string {
+  if (!text) return "";
+
+  // Xóa markdown block ```json và ``` nếu có
+  let cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+
+  // Tìm vị trí bắt đầu và kết thúc của object JSON
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+
+  if (start !== -1 && end !== -1 && end >= start) {
+    cleaned = cleaned.substring(start, end + 1);
+  }
+
+  // Xóa trailing commas (dấu phẩy thừa ở cuối mảng/object) gây lỗi JSON.parse
+  cleaned = cleaned.replace(/,\s*([\]}])/g, '$1');
+
+  return cleaned;
+}
+
 // ── Analyze SKKN ──────────────────────────────────────────────────
 export async function analyzeSKKN(
   title: string,
@@ -243,7 +264,8 @@ export async function analyzeSKKN(
     const text = response.text;
     if (!text) throw new Error("AI không trả về kết quả. Vui lòng thử lại.");
 
-    return JSON.parse(text) as AnalysisResult;
+    const cleanedText = cleanJsonResponse(text);
+    return JSON.parse(cleanedText) as AnalysisResult;
   } catch (error: any) {
     console.error("Error analyzing SKKN:", error);
     const statusCode = error?.statusCode || error?.status || error?.code;
