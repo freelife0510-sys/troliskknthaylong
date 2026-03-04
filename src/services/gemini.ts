@@ -33,7 +33,11 @@ export function removeApiKey(): void {
 
 // ── Model helpers ──────────────────────────────────────────────
 export function getSelectedModel(): string {
-  return localStorage.getItem(MODEL_STORAGE_KEY) || DEFAULT_MODEL;
+  const savedModel = localStorage.getItem(MODEL_STORAGE_KEY);
+  if (savedModel && AVAILABLE_MODELS.some(m => m.id === savedModel)) {
+    return savedModel;
+  }
+  return DEFAULT_MODEL;
 }
 
 export function saveSelectedModel(modelId: string): void {
