@@ -35,17 +35,45 @@ export async function testApiKey(apiKey: string): Promise<{ valid: boolean; erro
     }
     return { valid: false, error: "API Key không trả về kết quả." };
   } catch (error: any) {
+    console.error("API Key test error:", error);
+
+    // Try to get the HTTP status code from the error
+    const status = error?.status || error?.statusCode || error?.code;
     const msg = error?.message || "";
-    if (msg.includes("API_KEY_INVALID") || msg.includes("401")) {
+    const errorDetails = error?.errorDetails || error?.details;
+
+    // Log full error for debugging
+    console.error("Error status:", status, "Message:", msg, "Details:", errorDetails);
+
+    // Check by HTTP status code first (most reliable)
+    if (status === 401 || status === 403) {
+      if (msg.toLowerCase().includes("api_key_invalid") || msg.includes("API key not valid")) {
+        return { valid: false, error: "API Key không hợp lệ. Vui lòng kiểm tra lại." };
+      }
+      if (msg.toLowerCase().includes("permission") || msg.toLowerCase().includes("billing")) {
+        return { valid: false, error: "API Key chưa được kích hoạt hoặc chưa bật billing. Vui lòng kiểm tra tại Google Cloud Console." };
+      }
+      return { valid: false, error: `API Key bị từ chối (${status}). Chi tiết: ${msg}` };
+    }
+
+    if (status === 429) {
+      return { valid: false, error: "API Key đã hết hạn mức (quota). Vui lòng thử key khác hoặc chờ vài phút." };
+    }
+
+    if (status === 404 || msg.includes("not found") || msg.includes("NOT_FOUND")) {
+      return { valid: false, error: "Model AI không khả dụng. Vui lòng thử lại sau." };
+    }
+
+    // Fallback: check by message content
+    if (msg.includes("API_KEY_INVALID") || msg.includes("API key not valid")) {
       return { valid: false, error: "API Key không hợp lệ. Vui lòng kiểm tra lại." };
     }
-    if (msg.includes("QUOTA") || msg.includes("429")) {
-      return { valid: false, error: "API Key đã hết hạn mức (quota). Vui lòng thử key khác." };
-    }
-    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("ERR_NETWORK")) {
       return { valid: false, error: "Không thể kết nối mạng. Vui lòng kiểm tra internet." };
     }
-    return { valid: false, error: `Lỗi: ${msg || "Không xác định"}` };
+
+    // Show the actual error message to help debugging
+    return { valid: false, error: `Lỗi xác thực: ${msg || "Không xác định"}` };
   }
 }
 
