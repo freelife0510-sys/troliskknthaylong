@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { Key, Eye, EyeOff, CheckCircle, XCircle, Loader2, ExternalLink, Shield } from 'lucide-react';
+import { Key, Eye, EyeOff, CheckCircle, XCircle, Loader2, ExternalLink, Shield, ChevronDown, Cpu } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { testApiKey, saveApiKey, getApiKey, removeApiKey } from '../services/gemini';
+import { testApiKey, saveApiKey, getApiKey, removeApiKey, AVAILABLE_MODELS, getSelectedModel, saveSelectedModel } from '../services/gemini';
 
 interface ApiKeyManagerProps {
     onKeyValid: () => void;
     isModal?: boolean;
     onClose?: () => void;
+    required?: boolean;
 }
 
-export default function ApiKeyManager({ onKeyValid, isModal = false, onClose }: ApiKeyManagerProps) {
+export default function ApiKeyManager({ onKeyValid, isModal = false, onClose, required = false }: ApiKeyManagerProps) {
     const [key, setKey] = useState(getApiKey());
     const [showKey, setShowKey] = useState(false);
+    const [selectedModel, setSelectedModel] = useState(getSelectedModel());
     const [status, setStatus] = useState<'idle' | 'testing' | 'valid' | 'invalid'>
         (getApiKey() ? 'valid' : 'idle');
     const [error, setError] = useState('');
@@ -28,6 +30,7 @@ export default function ApiKeyManager({ onKeyValid, isModal = false, onClose }: 
         const result = await testApiKey(key.trim());
         if (result.valid) {
             saveApiKey(key.trim());
+            saveSelectedModel(selectedModel);
             setStatus('valid');
             setError('');
             setTimeout(() => onKeyValid(), 800);
@@ -78,6 +81,30 @@ export default function ApiKeyManager({ onKeyValid, isModal = false, onClose }: 
                             >
                                 {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Model Selector */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Chọn Model AI</label>
+                    <div className="relative">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-blue-500">
+                            <Cpu className="w-4 h-4" />
+                        </div>
+                        <select
+                            value={selectedModel}
+                            onChange={(e) => { setSelectedModel(e.target.value); if (status === 'valid') setStatus('idle'); }}
+                            className="w-full pl-10 pr-10 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm bg-gray-50 appearance-none cursor-pointer font-medium"
+                        >
+                            {AVAILABLE_MODELS.map((model) => (
+                                <option key={model.id} value={model.id}>
+                                    {model.name} — {model.description}
+                                </option>
+                            ))}
+                        </select>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                            <ChevronDown className="w-4 h-4" />
                         </div>
                     </div>
                 </div>
@@ -144,7 +171,7 @@ export default function ApiKeyManager({ onKeyValid, isModal = false, onClose }: 
                 </div>
             </div>
 
-            {isModal && onClose && (
+            {isModal && onClose && !required && (
                 <button
                     onClick={onClose}
                     className="mt-4 w-full text-center text-sm text-gray-500 hover:text-gray-700 transition-colors py-2"
@@ -158,7 +185,7 @@ export default function ApiKeyManager({ onKeyValid, isModal = false, onClose }: 
     if (isModal) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-                onClick={(e) => { if (e.target === e.currentTarget && onClose) onClose(); }}>
+                onClick={(e) => { if (e.target === e.currentTarget && onClose && !required) onClose(); }}>
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}

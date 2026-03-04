@@ -23,7 +23,7 @@ export default function App() {
     content: '',
   });
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(!getApiKey());
   const [showHistory, setShowHistory] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(!!getApiKey());
 
@@ -154,6 +154,7 @@ export default function App() {
         {showApiKeyModal && (
           <ApiKeyManager
             isModal
+            required={!hasApiKey}
             onKeyValid={() => { setHasApiKey(true); setShowApiKeyModal(false); }}
             onClose={() => setShowApiKeyModal(false)}
           />

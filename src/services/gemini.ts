@@ -1,8 +1,23 @@
 import { GoogleGenAI } from "@google/genai";
 import type { AnalysisResult } from "../types";
 
-// ── API Key helpers ──────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────
 const STORAGE_KEY = "skkn_api_key";
+const MODEL_STORAGE_KEY = "skkn_selected_model";
+
+export interface ModelOption {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export const AVAILABLE_MODELS: ModelOption[] = [
+  { id: "gemini-3-pro", name: "Gemini 3 Pro", description: "Mạnh nhất, phân tích sâu" },
+  { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", description: "Cân bằng tốc độ & chất lượng" },
+  { id: "gemini-3-flash", name: "Gemini 3 Flash", description: "Nhanh nhất, tiết kiệm quota" },
+];
+
+export const DEFAULT_MODEL = "gemini-2.5-flash";
 
 export function getApiKey(): string {
   return localStorage.getItem(STORAGE_KEY) ?? "";
@@ -16,6 +31,15 @@ export function removeApiKey(): void {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+// ── Model helpers ──────────────────────────────────────────────
+export function getSelectedModel(): string {
+  return localStorage.getItem(MODEL_STORAGE_KEY) || DEFAULT_MODEL;
+}
+
+export function saveSelectedModel(modelId: string): void {
+  localStorage.setItem(MODEL_STORAGE_KEY, modelId);
+}
+
 function createClient(apiKey?: string): GoogleGenAI {
   const key = apiKey ?? getApiKey();
   if (!key) throw new Error("Chưa nhập API Key. Vui lòng nhập API Key trước khi sử dụng.");
@@ -26,8 +50,9 @@ function createClient(apiKey?: string): GoogleGenAI {
 export async function testApiKey(apiKey: string): Promise<{ valid: boolean; error?: string }> {
   try {
     const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
+    const selectedModel = getSelectedModel();
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: selectedModel,
       contents: "Trả lời đúng 1 từ: Xin chào",
     });
     if (response.text) {
@@ -84,7 +109,7 @@ export async function analyzeSKKN(
   apiKey?: string
 ): Promise<AnalysisResult> {
   const ai = createClient(apiKey);
-  const model = "gemini-2.5-flash";
+  const model = getSelectedModel();
 
   const prompt = `
     Bạn là một CHUYÊN GIA THẨM ĐỊNH KHÓ TÍNH trong hội đồng chấm Sáng kiến kinh nghiệm (SKKN) ngành giáo dục.
