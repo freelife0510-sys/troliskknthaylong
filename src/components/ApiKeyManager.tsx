@@ -27,7 +27,7 @@ export default function ApiKeyManager({ onKeyValid, isModal = false, onClose, re
         setStatus('testing');
         setError('');
 
-        const result = await testApiKey(key.trim());
+        const result = await testApiKey(key.trim(), selectedModel);
         if (result.valid) {
             saveApiKey(key.trim());
             saveSelectedModel(selectedModel);

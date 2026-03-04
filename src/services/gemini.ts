@@ -51,14 +51,13 @@ function createClient(apiKey?: string): GoogleGenAI {
 }
 
 // ── Test API Key ──────────────────────────────────────────────────
-export async function testApiKey(apiKey: string): Promise<{ valid: boolean; error?: string }> {
+export async function testApiKey(apiKey: string, modelId: string): Promise<{ valid: boolean; error?: string }> {
   try {
     const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
 
-    // Luôn dùng gemini-2.0-flash hoặc gemini-2.5-flash để test key 
-    // vì các model "thinking" hoặc "pro" có thể không support prompt quá ngắn
+    // Test key bằng đúng model mà user chọn để đảm bảo model đó khả dụng với key này
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: modelId,
       contents: "Trả lời đúng 1 từ: Xin chào",
     });
     if (response.text) {
